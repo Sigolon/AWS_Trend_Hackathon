@@ -17,6 +17,9 @@ if len(sys.argv) != 3:
 context = sys.argv[1]
 GenAI_Model = sys.argv[2] # only Summary_GenAI, Cybersecurity_GenAI, Mitre_attack_GenAI
 
+api_gatway_url = 
+deploy_version = "test"
+
 field = {
     "Summary_GenAI": call_Lambda_Summary_GenAI,
     "Cybersecurity_GenAI": call_Lambda_Cybersecurity_GenAI,
@@ -25,7 +28,7 @@ field = {
 
 for model_name, model_function in field.items():
     if GenAI_Model == model_name:
-        response_to_flask = model_function(context) 
+        response_to_flask = model_function(api_gatway_url, deploy_version, context) 
     else:
         pass
 
