@@ -42,9 +42,9 @@ def get_response():
         # print("error: ", result.stderr)
     elif action == 2:
         result = subprocess.run(['/home/ubuntu/AWS_Trend_Hakethon/myenv/bin/python3', '/home/ubuntu/AWS_Trend_Hakethon/src/flask_to_lambda/flask_to_lambda.py', message,'Mitre_attack_GenAI'], capture_output=True, text=True)
-        print("result: ",result)
+        # print("result: ",result)
         response = result.stdout
-        print("mitre: ",response)
+        # print("mitre: ",response)
         if result.returncode == 0 and not result.stderr:
             response = result.stdout
         else:
@@ -68,4 +68,4 @@ def get_response():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
