@@ -4,16 +4,13 @@ import json
 import pandas
 
 def call_Lambda_Summary_GenAI(api_gatway_url, deploy_version, context):
-    lambda_url = f"{api_gatway_url}/{deploy_version}/Lambda_Summary_GenAI"
+    lambda_url = f"{api_gatway_url}/{deploy_version}/call_Lambda_Summary_GenAI_Jim"
     
-    instruction = "Please help me summarize the context. And summary limit 200 word"
+    instruction = "Please help me summarize the context. And summary limit 20 word"
     context = context
 
     template = {
-        "prompt": "Below is an instruction that describes a task, paired with an input that provides further context. "
-        "Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Input:\n{context}\n\n",
-        "completion": " {response}",
+        "prompt": "prompt : {instruction} ; context: {context} ; response : summary is ... ..."
     }
 
     datapoint = {
@@ -21,113 +18,141 @@ def call_Lambda_Summary_GenAI(api_gatway_url, deploy_version, context):
         "context" : context
     }
 
-    input_output_demarkation_key = "\n\n### Response:\n"
-
     payload = {
         "inputs": template["prompt"].format(
             instruction=datapoint["instruction"], context=datapoint["context"]
         )
-        + input_output_demarkation_key,
-        "parameters": {"max_new_tokens": 256},
     }
-    response = requests.post(lambda_url, json=payload)
+    response = requests.post(lambda_url, data=payload)
+    try : 
+        response = json.loads(response.text)[0]["generated_text"].split("summary is ... ...")[-1].replace("\n", "")
+        print(response)
+    except : 
+        print(response)
+        print(response.text)
 
-    print(response)
 
 
+import requests
+import re
 def call_Lambda_Mitre_attack_GenAI(api_gatway_url, deploy_version, context):
-    
     def call_Mitre_one(context) : 
-        lambda_url = f"{api_gatway_url}/{deploy_version}/Lambda_Mitre_attack_GenAI_one"
+        lambda_url = f"{api_gatway_url}/{deploy_version}/call_Lambda_Mitre_attack_GenAI_one_Jim"
 
-        with open("Cybersecurity_Classification_define.json", "r") as f : 
+        with open("/home/ubuntu/AWS_Trend_Hakethon/src/flask_to_lambda/Cybersecurity_Classification_define.json", "r") as f : 
             Cybersecurity_Classification_define = f.read()
 
-        prompt = {
-            "prompt": "Below is an instruction that describes a task, paired with an input that provides further context. "
-            "Write a response that appropriately completes the request.\n\n"
-            "### Instruction:\n{instruction}\n\n### Input:\n{context}\n\n",
-            "completion": "{response}",
+        template = {
+            "prompt": "prompt : {instruction} ; context: {context}"
         }
 
         datapoint = {
             "instruction" : "Please help me select the Cybersecurity Classification from content based on cybersecurity classification, and return them in JSON format. Only tell me the category names.",
-            "context" : f"content : {context}\n\n Mitre_Attack Tactics definition : {Cybersecurity_Classification_define}"
+            "context" : f"content : {context}\n\n Mitre_Attack Tactics definition : {Cybersecurity_Classification_define} \n Answer : "
         }
 
-        context = f"Please help me select the Cybersecurity Classification from {context} based on cybersecurity classification, and return them in JSON format. Only tell me the category names. The Cybersecurity Classification contain {Cybersecurity_Classification_define}"
-
-        json_body = {
-        "inputs": prompt["prompt"].format(
-            instruction=datapoint["instruction"], context=datapoint["context"]
-        ),
-        "parameters": {
-            "max_new_tokens": 256,
-            "top_p": 0.9,
-            "temperature": 0.6,
-            "stop": ""
-            }   
+        payload = {
+            "inputs": template["prompt"].format(
+                instruction=datapoint["instruction"], context=datapoint["context"]
+            )
         }
-        mitre_one_response = requests.post(lambda_url, json=json_body)
-        return mitre_one_response
-    
+
+        mitre_one_response = requests.post(lambda_url, data=payload)
+        mitre_one_response = json.loads(mitre_one_response.text)[0]["generated_text"].split("Answer : ")[-1]
+
+        mitre_one_list = []
+        for key in json.loads(Cybersecurity_Classification_define) : 
+            match = re.search(key, mitre_one_response)
+            if match :
+                mitre_one_list.append(re.search(key, mitre_one_response).group())
+
+        mitre_one_list = list(set(mitre_one_list))
+        
+        return mitre_one_list
+
     def call_Mitre_two(mitre_one_context) : 
-        with open("Cybersecurity_Question_list.txt", "r") as f :    
-            Cybersecurity_Question_list = f.read()
-            
-        lambda_url = f"{api_gatway_url}/{deploy_version}/Lambda_Mitre_attack_GenAI_two"
+        
+        Cybersecurity_Question_list = [
+            "Active Scanning", "Gather Victim Host Information", "Gather Victim Identity Information",
+            "Gather Victim Network Information", "Gather Victim Org Information", "Phishing for Information",
+            "Search Closed Sources", "Search Open Technical Databases", "Search Open Websites/Domains",
+            "Acquire Infrastructure", "Compromise Accounts", "Compromise Infrastructure", "Develop Capabilities",
+            "Establish Accounts", "Obtain Capabilities", "Stage Capabilities", "Phishing", "Supply Chain Compromise",
+            "Valid Accounts", "Command and Scripting Interpreter", "Inter-Process Communication", "Scheduled Task/Job",
+            "System Services", "User Execution", "Account Manipulation", "Boot or Logon Autostart Execution",
+            "Boot or Logon Initialization Scripts", "Create Account", "Create or Modify System Process",
+            "Event Triggered Execution", "Hijack Execution Flow", "Modify Authentication Process",
+            "Office Application Startup", "Pre-OS Boot", "Server Software Component", "Traffic Signaling",
+            "Abuse Elevation Control Mechanism", "Access Token Manipulation", "Domain or Tenant Policy Modification",
+            "Process Injection", "Execution Guardrails", "File and Directory Permissions Modification", "Hide Artifacts",
+            "Impair Defenses", "Indicator Removal", "Masquerading", "Modify Cloud Compute Infrastructure",
+            "Modify System Image", "Network Boundary Bridging", "Obfuscated Files or Information", "Subvert Trust Controls",
+            "System Binary Proxy Execution", "System Script Proxy Execution", "Trusted Developer Utilities Proxy Execution",
+            "Use Alternate Authentication Material", "Virtualization/Sandbox Evasion", "Weaken Encryption",
+            "Adversary-in-the-Middle", "Brute Force", "Credentials from Password Stores", "Forge Web Credentials",
+            "Input Capture", "OS Credential Dumping", "Steal or Forge Kerberos Tickets", "Unsecured Credentials",
+            "Account Discovery", "Permission Groups Discovery", "Software Discovery", "System Location Discovery",
+            "System Network Configuration Discovery", "Remote Service Session Hijacking", "Remote Services",
+            "Archive Collected Data", "Data from Configuration Repository", "Data from Information Repositories",
+            "Data Staged", "Email Collection", "Application Layer Protocol", "Data Encoding", "Data Obfuscation",
+            "Dynamic Resolution", "Encrypted Channel", "Proxy", "Web Service", "Automated Exfiltration",
+            "Exfiltration Over Alternative Protocol", "Exfiltration Over Other Network Medium", "Exfiltration Over Physical Medium",
+            "Exfiltration Over Web Service", "Data Manipulation", "Defacement", "Disk Wipe", "Endpoint Denial of Service",
+            "Network Denial of Service"
+        ]
 
-        prompt = {
-            "prompt": "Below is an instruction that describes a task, paired with an input that provides further context. "
-            "Write a response that appropriately completes the request.\n\n"
-            "### Instruction:\n{instruction}\n\n### Input:\n{context}\n\n",
-            "completion": "{response}",
+        lambda_url = f"{api_gatway_url}/{deploy_version}/call_Lambda_Mitre_attack_GenAI_two_Jim"
+
+        template = {
+            "prompt": "prompt : {instruction} ; context: {context}"
         }
 
         datapoint = {
             "instruction" : "Please help me select the Cybersecurity Questions from content based on cybersecurity classification, and return them in JSON format. Only tell me the category names. The Cybersecurity Questions contain Cybersecurity_Question_list",
-            "context" : f"content : {mitre_one_context}\n\n Cybersecurity_Question_list : {Cybersecurity_Question_list}"
+            "context" : f"content : {mitre_one_context}\n\n Cybersecurity_Question_list : {Cybersecurity_Question_list} \n Answer : "
         }
 
         json_body = {
-        "inputs": prompt["prompt"].format(
+        "inputs": template["prompt"].format(
             instruction=datapoint["instruction"], context=datapoint["context"]
-        ),
-        "parameters": {
-            "max_new_tokens": 256,
-            "top_p": 0.9,
-            "temperature": 0.6,
-            "stop": ""
-            }   
+        )   
         }
 
-        mitre_two_response = requests.post(lambda_url, json=json_body)
-        return mitre_two_response
+        mitre_two_response = requests.post(lambda_url, data=json_body)
+        mitre_two_response = json.loads(mitre_two_response.text)[0]["generated_text"].split("Answer : ")[-1]
 
-    # mitre_one_response = call_Mitre_one(context)
-    # mitre_two_response = call_Mitre_two(context)
+        mitre_two_list = []
+        for key in Cybersecurity_Question_list : 
+            match = re.search(key, mitre_two_response)
+            try : 
+                mitre_two_list.append(re.search(key, mitre_two_response).group())
+            except : 
+                pass
 
-    # mitre_one = json.loads(mitre_one_response["completion"])["Cybersecurity Classification"]
-    # mitre_two = json.loads(mitre_two_response["completion"])["Cybersecurity Question"]
+        mitre_two_list = list(set(mitre_two_list))
+        return mitre_two_list
+    
+    mitre_one_response = call_Mitre_one(context)
+    mitre_two_response = call_Mitre_two(context)
 
-    # df = pandas.read_json("/home/sigolon/AWS_Trend_Hakethon/data/database/Mitre_Attack_GenAI_related_table.json")
-    # result_list = []
-    # for tactic	in mitre_one : 
-    #     for technique in mitre_two : 
-    #         if len(df[(df["tactic"] == tactic) & (df["technique"] == technique)]) != 0 : 
-    #             result = {
-    #                 "tactic" : tactic,
-    #                 "technique" : technique,
-    #                 "TID" : df[(df["tactic"] == tactic) & (df["technique"] == technique)]["TID"].values[0]
-    #             }
-    #             result_list.append(result)
+    df = pandas.read_json("/home/ubuntu/AWS_Trend_Hakethon/data/database/Mitre_Attack_GenAI_related_table.json")
+    result_list = []
+    for tactic in mitre_one_response : 
+        for technique in mitre_two_response : 
+            if len(df[(df["tactic"] == tactic) & (df["technique"] == technique)]) != 0 : 
+                result = {
+                    "tactic" : tactic,
+                    "technique" : technique,
+                    "TID" : df[(df["tactic"] == tactic) & (df["technique"] == technique)]["TID"].values[0]
+                }
+                result_list.append(result)
 
     
-    # mitre_table = pandas.DataFrame(result_list)
-    # mitre_table.to_json("call_Lambda_Mitre_attack_GenAI_output.json")
+    mitre_table = pandas.DataFrame(result_list)
+    mitre_table.to_json("/home/ubuntu/AWS_Trend_Hakethon/src/flask_to_lambda/call_Lambda_Mitre_attack_GenAI_output.json")
 
     # Mitre_att&ck_TID_table
-    with open("call_Lambda_Mitre_attack_GenAI_output.json", "r") as f :  
+    with open("/home/ubuntu/AWS_Trend_Hakethon/src/flask_to_lambda/call_Lambda_Mitre_attack_GenAI_output.json", "r") as f :  
         Mitre_attack_TID_table = f.read()
 
     print(Mitre_attack_TID_table)
@@ -139,29 +164,6 @@ def call_Lambda_Cybersecurity_GenAI(api_gatway_url, deploy_version, context):
         OUTPUT_FILE = "elk_dump.json"
 
         SEARCH_BODY = dsl_query
-
-        '''''
-        "query": {
-            "bool": {
-            "must": [
-                {
-                "exists": {
-                    "field": "technique_id"
-                }
-                },
-                {
-                "range": {
-                    "@timestamp": {
-                    "gte": "2024-04-10T09:50:00.000Z",
-                    "lte": "2024-04-10T19:00:00.000Z"
-                    }
-                }
-                }
-            ]
-            }
-        }
-        }
-        '''''
 
         # 轉換SEARCH_BODY為JSON字符串
         search_body_json = json.dumps(SEARCH_BODY)
@@ -176,45 +178,16 @@ def call_Lambda_Cybersecurity_GenAI(api_gatway_url, deploy_version, context):
             "--searchBody=" + search_body_json
         ], check=True)
 
-    lambda_url = f"{api_gatway_url}/{deploy_version}/Lambda_Cybersecurity_GenAI"
-    # check this elasticsearch mapping 
-    mapping = {
-        "stocks": {
-            "mappings": {
-            "properties": {
-                "url": {"type": "text"},
-                "content": {"type":"text"},
-                "post_year" : {"type":"date"},
-                "post_mouth" : {"type":"float"},
-                "post_day"  : {"type":"float"},
-                "name" : {
-                "type": "text",
-                "fields": {
-                    "keyword":{"type":"keyword", "ignore_above":256}
-                    }
-                },
-                "open"  : {"type":"float"},
-                "volume": {"type":"long"}
-                }
-            }
-        }
-    }
-
-    context = f'Given the mapping delimited by triple backticks ```{mapping}``` translate the text delimited by triple quotes in a valid Elasticsearch DSL query """{context}""". Give me only the json code part of the answer. Compress the json output removing spaces.'
-
+    lambda_url = f"{api_gatway_url}/{deploy_version}/call_Lambda_Cybersecurity_GenAI_Jim"
     json_body = {
-    "inputs": context,
-    "parameters": {
-        "max_new_tokens": 256,
-        "top_p": 0.9,
-        "temperature": 0.6,
-        "stop": ""
-        }
+        'inputs': context
     }
-    dsl_response = requests.post(lambda_url, json=json_body)
 
+    dsl_response = requests.post(lambda_url, data=json_body)
+    dsl_response = json.loads(dsl_response.text)[0]["generated_text"]
+    print(dsl_response)
     # elk dump Cybersecurity information
-
+    # password 可能要改
     # elasticsearch_data_dump(hostip = "127.0.0.1", pattern_index = "Cybersecurity_information", dsl_query = dsl_response["body"])
     # df = pandas.read_json("elk_dump.json")
 
@@ -222,8 +195,8 @@ def call_Lambda_Cybersecurity_GenAI(api_gatway_url, deploy_version, context):
     # url = df_return["url"].values()[0]
     # content = df_return["content"].values()[0]
 
-    Cybersecurity_information = {
-        "url" : "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
-        "content" : "dddddddddddddddddddddddddddddddddddd",
-    }
-    print(Cybersecurity_information)
+    # Cybersecurity_information = {
+    #     "url" : url,
+    #     "content" : content[0][0:200].replace("\xa0", " ") + "... ...",
+    # }
+    # print(Cybersecurity_information)

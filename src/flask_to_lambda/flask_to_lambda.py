@@ -1,9 +1,7 @@
 import sys
 import os
 
-sys_path = "/".join(os.getcwd().split("/")[0:-2])
-
-sys.path.append(sys_path)
+sys.path.append("/home/ubuntu/AWS_Trend_Hakethon")
 
 from tools.call_Lambda_function_test_1 import (
     call_Lambda_Summary_GenAI, 
@@ -17,7 +15,7 @@ if len(sys.argv) != 3:
 context = sys.argv[1]
 GenAI_Model = sys.argv[2] # only Summary_GenAI, Cybersecurity_GenAI, Mitre_attack_GenAI
 
-api_gatway_url = 
+api_gatway_url = "https://3qkpidhy64.execute-api.us-west-2.amazonaws.com" 
 deploy_version = "test"
 
 field = {
